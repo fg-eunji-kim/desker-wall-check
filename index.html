@@ -324,12 +324,27 @@ const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls)
 const codeLine = p => p.model ? '제품코드 ' + p.model : '제품코드 없음';
 const qtyOf = id => (cart.find(c => c.id === id) || {}).qty || 0;
 
-function evaluate(entry){
+// 두 상품끼리 직접 따져 본 결과
+function evaluateDirect(entry){
   const p = PRODUCTS[entry.id];
   if (!p.required) return {status:'ok'};
   const tests = RULES[p.rule].tests;
   const partners = cart.filter(c => (c.id !== entry.id || c.qty > 1) && tests.some(t => TESTS[t](PRODUCTS[c.id])));
   return partners.length ? {status:'rec', partners} : {status:'must'};
+}
+// 담은 상품 중 어떤 두 상품이 이미 권장 조합이면, 거기에 함께 연결하는 나머지 상품도 권장
+function evaluate(entry){
+  const r = evaluateDirect(entry);
+  if (r.status !== 'must') return r;
+  const anchors = new Map();
+  cart.forEach(c => {
+    const d = evaluateDirect(c);
+    if (d.status !== 'rec') return;
+    anchors.set(c.id, c);
+    d.partners.forEach(x => anchors.set(x.id, x));
+  });
+  anchors.delete(entry.id);
+  return anchors.size ? {status:'rec', partners:[...anchors.values()], chained:true} : r;
 }
 
 function renderTabs(){
@@ -447,7 +462,8 @@ function renderResult(){
     if (r.status === 'rec') {
       const names = [...new Set(r.partners.map(x => x.id === c.id ? '같은 상품 1개 더' : PRODUCTS[x.id].name))];
       const n = el('p','note');
-      n.append(document.createTextNode('함께 담은 '), el('strong', null, names.join(', ')), document.createTextNode('와 붙여서 연결 설치하면 권장, 따로 설치하면 필수예요.'));
+      if (r.chained) n.append(document.createTextNode('함께 담은 '), el('strong', null, names.join(', ')), document.createTextNode('이(가) 서로 권장 조합이라, 여기에 붙여서 연결 설치하면 권장, 따로 설치하면 필수예요.'));
+      else n.append(document.createTextNode('함께 담은 '), el('strong', null, names.join(', ')), document.createTextNode('와 붙여서 연결 설치하면 권장, 따로 설치하면 필수예요.'));
       info.append(n);
     } else if (r.status === 'must') {
       info.append(el('p','note','이 상품과 연결 설치하면 권장으로 바뀌어요: ' + RULES[p.rule].text));
