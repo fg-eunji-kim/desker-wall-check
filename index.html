@@ -159,13 +159,16 @@ const RULES = {
   B:{text:'600폭 책장(하부깊은수납, 서랍, 거울형), 옷장', tests:['shelfDDM','wardrobe']},
   C:{text:'600폭 책장(하부깊은수납, 서랍, 거울형), 일반형 책상세트, 옷장', tests:['shelfDDM','deskGeneral','wardrobe']},
   D:{text:'600폭 책장(모든 사양), 책상세트(모든 사양)', tests:['shelfAll','deskAll']},
-  E:{text:'책상세트(모든 사양), 상부도어가 없는 600폭 책장, 거울 화장대형 책장', tests:['deskAll','shelfNoUpper']}
+  E:{text:'책상세트(모든 사양), 상부도어가 없는 600폭 책장, 거울 화장대형 책장', tests:['deskAll','shelfNoUpper']},
+  // 목제 책장(하부도어·상하부도어)용: 1600폭 이상·모션 책상세트와는 연결해도 벽고정 필수
+  F:{text:'600폭 책장(하부깊은수납, 서랍, 거울형), 1600폭 미만 일반형 책상세트, 옷장', tests:['shelfDDM','deskGeneralUnder1600','wardrobe']}
 };
 const TESTS = {
   shelfAll: p => p.kind==='shelf',
   shelfDDM: p => p.kind==='shelf' && ['deep','drawer','mirror'].includes(p.line),
   shelfNoUpper: p => p.kind==='shelf' && !p.upper,
   deskGeneral: p => p.kind==='desk' && !p.motion,
+  deskGeneralUnder1600: p => p.kind==='desk' && !p.motion && p.width < 1600,
   deskAll: p => p.kind==='desk',
   wardrobe: p => p.kind==='wardrobe'
 };
@@ -229,11 +232,11 @@ const RAW = [
 ['1600폭 5단 모션 멀티책상세트(조명+도어형)+링고/올라운드/아이블 의자','DSDEM1603J','2024094304','Y','B'],
 ['1600폭 6단 모션 멀티책상세트(조명+도어형)+링고/올라운드/아이블 의자','DSDEM1604J','2024094300','Y','B'],
 ['600폭 5단 목제 책장(오픈형)','DSCC065N','97526784','N',''],
-['600폭 5단 목제 책장(하부도어형)','DSCC065SN','97526746','Y','C'],
-['600폭 5단 목제 책장(상하부도어형)','DSCC065SSN','97526752','Y','C'],
+['600폭 5단 목제 책장(하부도어형)','DSCC065SN','97526746','Y','F'],
+['600폭 5단 목제 책장(상하부도어형)','DSCC065SSN','97526752','Y','F'],
 ['600폭 6단 목제 책장(오픈형)','DSCC066','97526741','N',''],
-['600폭 6단 목제 책장(하부도어형)','DSCC066S','97526721','Y','C'],
-['600폭 6단 목제 책장(상하부도어형)','DSCC066SS','97526689','Y','C'],
+['600폭 6단 목제 책장(하부도어형)','DSCC066S','97526721','Y','F'],
+['600폭 6단 목제 책장(상하부도어형)','DSCC066SS','97526689','Y','F'],
 ['600폭 5단 깊은 수납형 목제 책장(하부도어형)','DSCC465S','97526644','Y','D'],
 ['600폭 5단 깊은 수납형 목제 책장(상하부도어형)','DSCC465SS','97526616','Y','D'],
 ['600폭 6단 깊은 수납형 목제 책장(하부도어형)','DSCC466S','97526595','Y','D'],
@@ -280,6 +283,7 @@ const PRODUCTS = RAW.map(([name, model, cj, req, rule], id) => {
     p.upper = name.includes('상하부도어') || name.includes('상부도어형');
   }
   const m = name.match(/(\d{3,4})폭 (\d)단/);
+  p.width = Number(m[1]);
   p.chip = (p.kind==='desk') ? `${m[1]}폭 ${m[2]}단` : `${m[2]}단`;
   p.hidden = name.includes('+링고') || name.includes('패키지');
   p.search = (name + ' ' + model).toLowerCase().replace(/\s+/g,'');
