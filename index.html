@@ -49,6 +49,11 @@ header p{margin:0; color:var(--muted); font-size:.9375rem}
 .picker{margin-top:14px; display:grid; gap:12px}
 .tabnote{margin:0; font-size:.875rem; color:var(--muted)}
 .group{background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:16px}
+.group-head{display:flex; gap:14px; align-items:center}
+.photo{flex:none; object-fit:cover; border-radius:8px; background:#fff; border:1px solid var(--line)}
+.group .photo{width:72px; height:72px}
+.item .photo{width:56px; height:56px}
+.item-main{display:flex; gap:12px; align-items:flex-start; min-width:0}
 .group h2{margin:0; font-size:1.0625rem; line-height:1.4}
 .group .sub{margin:2px 0 0; font-size:.8125rem; color:var(--muted)}
 .row{display:grid; grid-template-columns:7.5em 1fr; gap:6px 12px; align-items:start; margin-top:12px}
@@ -294,24 +299,38 @@ const PRODUCTS = RAW.map(([name, model, cj, req, rule], id) => {
 const r = (a,b) => Array.from({length:b-a+1}, (_,i) => a+i);
 const CATALOG = [
   {key:'desk', label:'책상세트', groups:[
-    {t:'콘센트형 책상세트', rows:[['', r(0,3)]]},
-    {t:'콘센트형 책상세트 (조명형)', rows:[['', r(8,11)]]},
-    {t:'콘센트형 책상세트 (조명+도어형)', rows:[['', r(16,19)]]},
-    {t:'모션 책상세트 (조명+도어형)', rows:[['', r(24,27)]]},
-    {t:'멀티책상세트 (조명+도어형)', rows:[['', r(32,37)]]},
-    {t:'모션 멀티책상세트 (조명+도어형)', rows:[['', r(44,49)]]}
+    {t:'콘센트형 책상세트', img:'desk-outlet', rows:[['', r(0,3)]]},
+    {t:'콘센트형 책상세트 (조명형)', img:'desk-outlet-light', rows:[['', r(8,11)]]},
+    {t:'콘센트형 책상세트 (조명+도어형)', img:'desk-outlet-door', rows:[['', r(16,19)]]},
+    {t:'모션 책상세트 (조명+도어형)', img:'desk-motion', rows:[['', r(24,27)]]},
+    {t:'멀티책상세트 (조명+도어형)', img:'desk-multi', rows:[['', r(32,37)]]},
+    {t:'모션 멀티책상세트 (조명+도어형)', img:'desk-motion-multi', rows:[['', r(44,49)]]}
   ]},
   {key:'shelf', label:'책장', note:'모두 600폭 목제 책장이에요.', groups:[
-    {t:'목제 책장', rows:[['오픈형',[56,59]], ['하부도어형',[57,60]], ['상하부도어형',[58,61]]]},
-    {t:'깊은 수납형 책장', rows:[['하부도어형',[62,64]], ['상하부도어형',[63,65]]]},
-    {t:'서랍형 책장', rows:[['도어 없음',[66,68]], ['상부도어형',[67,69]]]},
-    {t:'거울 화장대 책장', rows:[['깊은 수납형',[70,71]], ['서랍형',[72,73]]]}
+    {t:'목제 책장', img:'shelf-wood', rows:[['오픈형',[56,59]], ['하부도어형',[57,60]], ['상하부도어형',[58,61]]]},
+    {t:'깊은 수납형 책장', img:'shelf-deep', rows:[['하부도어형',[62,64]], ['상하부도어형',[63,65]]]},
+    {t:'서랍형 책장', img:'shelf-drawer', rows:[['도어 없음',[66,68]], ['상부도어형',[67,69]]]},
+    {t:'거울 화장대 책장', img:'shelf-mirror', rows:[['깊은 수납형',[70,71]], ['서랍형',[72,73]]]}
   ]},
   {key:'wardrobe', label:'옷장', groups:[
-    {t:'800폭 옷장 (서랍형)', rows:[['',[74,75]]]}
+    {t:'800폭 옷장 (서랍형)', img:'wardrobe', rows:[['',[74,75]]]}
   ]},
   {key:'search', label:'제품코드로 찾기'}
 ];
+
+// 상품마다 속한 시리즈 사진 이름을 붙여 둔다
+CATALOG.forEach(c => (c.groups || []).forEach(g => g.rows.forEach(([, ids]) => ids.forEach(id => { PRODUCTS[id].series = g.img; }))));
+
+// 사진: images/제품코드.jpg 가 있으면 그것, 없으면 images/시리즈.jpg, 둘 다 없으면 숨김
+function photo(names){
+  const list = names.filter(Boolean).map(n => 'images/' + n + '.jpg');
+  if (!list.length) return null;
+  const img = el('img','photo'); img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+  let i = 0;
+  img.addEventListener('error', () => { i++; if (i < list.length) img.src = list[i]; else img.remove(); });
+  img.src = list[0];
+  return img;
+}
 
 const KEY = 'desker-wall-cart-v1';
 let cart = [];
@@ -376,8 +395,11 @@ function renderPicker(){
   if (cat.note) box.append(el('p','tabnote',cat.note));
   cat.groups.forEach(g => {
     const card = el('div','group');
-    card.append(el('h2', null, g.t));
-    if (g.sub) card.append(el('p','sub',g.sub));
+    const head = el('div','group-head'), titles = el('div');
+    titles.append(el('h2', null, g.t));
+    if (g.sub) titles.append(el('p','sub',g.sub));
+    const ph = photo([g.img]); if (ph) head.append(ph);
+    head.append(titles); card.append(head);
     g.rows.forEach(([label, ids]) => {
       const row = el('div', 'row' + (label ? '' : ' solo'));
       if (label) row.append(el('div','row-label',label));
@@ -474,7 +496,10 @@ function renderResult(){
     minus.addEventListener('click', () => changeQty(c.id, -1));
     plus.addEventListener('click', () => changeQty(c.id, 1));
     q.append(minus, el('span', null, String(c.qty)), plus);
-    top.append(info, q); li.append(top); list.append(li);
+    const main = el('div','item-main'), ph = photo([p.model, p.series]);
+    if (ph) main.append(ph);
+    main.append(info);
+    top.append(main, q); li.append(top); list.append(li);
   });
 }
 
